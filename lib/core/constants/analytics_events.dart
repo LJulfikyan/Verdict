@@ -1,0 +1,14 @@
+abstract final class AnalyticsEvents {
+  static const appOpen = 'app_open';
+  static const feedOpen = 'feed_open';
+  static const feedRefresh = 'feed_refresh';
+  static const feedScroll = 'feed_scroll';
+  static const caseView = 'case_view';
+  static const caseVote = 'case_vote';
+  static const caseCreateStarted = 'case_create_started';
+  static const caseCreated = 'case_created';
+  static const caseSaved = 'case_saved';
+  static const caseShared = 'case_shared';
+  static const premiumPurchase = 'premium_purchase';
+  static const notificationOpened = 'notification_opened';
+}

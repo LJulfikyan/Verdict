@@ -11,6 +11,7 @@ class AuthController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxBool isGuest = false.obs;
   final RxBool isAuthenticated = false.obs;
+  final RxString errorMessage = ''.obs;
 
   @override
   void onInit() {
@@ -32,11 +33,29 @@ class AuthController extends GetxController {
 
   Future<void> _run(Future<dynamic> Function() action) async {
     isLoading.value = true;
+    errorMessage.value = '';
     try {
       await action();
       _syncState();
+    } catch (error) {
+      errorMessage.value = _mapError(error);
+      rethrow;
     } finally {
       isLoading.value = false;
     }
+  }
+
+  String _mapError(Object error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('cancel')) {
+      return 'Sign in was canceled.';
+    }
+    if (message.contains('not supported')) {
+      return 'This sign-in method is not available on this device.';
+    }
+    if (message.contains('id token')) {
+      return 'Sign in could not be verified. Please try again.';
+    }
+    return 'Unable to complete sign in right now.';
   }
 }

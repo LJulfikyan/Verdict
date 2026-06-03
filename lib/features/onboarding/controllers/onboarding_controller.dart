@@ -12,14 +12,25 @@ class OnboardingController extends GetxController {
   final RxBool isLastPage = false.obs;
 
   void nextPage() {
-    currentPage.value += 1;
-    isLastPage.value = currentPage.value >= 2;
+    if (currentPage.value < 2) {
+      currentPage.value += 1;
+      _sync();
+    }
   }
 
   void previousPage() {
     currentPage.value = currentPage.value > 0 ? currentPage.value - 1 : 0;
-    isLastPage.value = currentPage.value >= 2;
+    _sync();
   }
 
   Future<void> completeOnboarding() => _appStateService.completeOnboarding();
+
+  void setPage(int index) {
+    currentPage.value = index;
+    _sync();
+  }
+
+  void _sync() {
+    isLastPage.value = currentPage.value >= 2;
+  }
 }

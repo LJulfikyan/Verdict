@@ -6,6 +6,7 @@ class FirebaseAuthDataSource {
 
   final FirebaseAuth _firebaseAuth;
 
+  FirebaseAuth get instance => _firebaseAuth;
   User? get currentUser => _firebaseAuth.currentUser;
   Stream<User?> authStateChanges() => _firebaseAuth.authStateChanges();
 
@@ -19,5 +20,13 @@ class FirebaseAuthDataSource {
     if (user != null) {
       await user.delete();
     }
+  }
+
+  Future<UserCredential> signInWithCredential(AuthCredential credential) {
+    return _firebaseAuth.signInWithCredential(credential);
+  }
+
+  Future<UserCredential> signInWithProvider(AuthProvider provider) {
+    return _firebaseAuth.signInWithProvider(provider);
   }
 }

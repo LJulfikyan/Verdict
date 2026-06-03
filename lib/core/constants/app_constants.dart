@@ -18,6 +18,12 @@ abstract final class AppConstants {
   static const revenueCatIosApiKey = String.fromEnvironment(
     'REVENUECAT_IOS_API_KEY',
   );
+  static const googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+  );
+  static const googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+  );
   static const admobAndroidAppId = String.fromEnvironment(
     'ADMOB_ANDROID_APP_ID',
   );

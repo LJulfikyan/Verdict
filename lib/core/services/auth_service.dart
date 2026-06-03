@@ -19,6 +19,7 @@ class AuthService extends GetxService with ChangeNotifier {
   bool get isGuest => _currentUser.value?.isAnonymous ?? false;
 
   Future<AuthService> init() async {
+    await _repository.initializeGoogleSignIn();
     _subscription = _repository.authStateChanges().listen((user) {
       _currentUser.value = user;
       notifyListeners();

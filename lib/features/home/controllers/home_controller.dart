@@ -1,33 +1,19 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 
-import '../../../core/constants/analytics_events.dart';
-import '../../../core/services/ad_service.dart';
-import '../../../core/services/analytics_service.dart';
 import '../../../core/services/share_service.dart';
 import '../../../data/models/case_model.dart';
-import '../../../data/repositories/case_repository.dart';
-import '../../../data/repositories/vote_repository.dart';
+import '../repositories/home_mock_repository.dart';
 
 enum FeedState { loading, success, empty, error }
 
 class HomeController extends GetxController {
   HomeController({
-    required CaseRepository caseRepository,
-    required VoteRepository voteRepository,
-    required AnalyticsService analyticsService,
-    required AdService adService,
+    required HomeMockRepository repository,
     required ShareService shareService,
-  }) : _caseRepository = caseRepository,
-       _voteRepository = voteRepository,
-       _analyticsService = analyticsService,
-       _adService = adService,
+  }) : _repository = repository,
        _shareService = shareService;
 
-  final CaseRepository _caseRepository;
-  final VoteRepository _voteRepository;
-  final AnalyticsService _analyticsService;
-  final AdService _adService;
+  final HomeMockRepository _repository;
   final ShareService _shareService;
 
   final RxList<CaseModel> feedItems = <CaseModel>[].obs;
@@ -36,11 +22,10 @@ class HomeController extends GetxController {
   final RxBool hasMore = true.obs;
   final Rxn<CaseModel> selectedCase = Rxn<CaseModel>();
   final Rx<FeedState> feedState = FeedState.loading.obs;
-  final RxString selectedVote = ''.obs;
-  final RxBool isVoting = false.obs;
-  final RxMap<String, int> voteResult = <String, int>{}.obs;
-
-  DocumentSnapshot<Map<String, dynamic>>? _lastDocument;
+  final RxSet<String> savedCaseIds = <String>{}.obs;
+  final RxMap<String, bool> expandedCaseIds = <String, bool>{}.obs;
+  final RxMap<String, bool> busyVotes = <String, bool>{}.obs;
+  int _currentPage = 0;
 
   @override
   void onInit() {
@@ -52,17 +37,13 @@ class HomeController extends GetxController {
     isLoading.value = true;
     feedState.value = FeedState.loading;
     try {
-      final page = await _caseRepository.getFeed();
-      feedItems.assignAll(page.items);
-      _lastDocument = page.lastDocument;
-      hasMore.value = page.hasMore;
-      feedState.value = page.items.isEmpty
-          ? FeedState.empty
-          : FeedState.success;
-      await _analyticsService.logEvent(AnalyticsEvents.feedOpen);
+      _currentPage = 0;
+      final page = await _repository.fetchFeed(page: _currentPage);
+      feedItems.assignAll(page);
+      hasMore.value = page.length == HomeMockRepository.pageSize;
+      feedState.value = page.isEmpty ? FeedState.empty : FeedState.success;
     } catch (_) {
       feedState.value = FeedState.error;
-      rethrow;
     } finally {
       isLoading.value = false;
     }
@@ -70,39 +51,38 @@ class HomeController extends GetxController {
 
   Future<void> refreshFeed() async {
     isRefreshing.value = true;
-    _lastDocument = null;
     try {
       await loadFeed();
-      await _analyticsService.logEvent(AnalyticsEvents.feedRefresh);
     } finally {
       isRefreshing.value = false;
     }
   }
 
   Future<void> loadMore() async {
-    if (isLoading.value || !hasMore.value || _lastDocument == null) {
+    if (isLoading.value || !hasMore.value) {
       return;
     }
+
     isLoading.value = true;
     try {
-      final page = await _caseRepository.getFeed(startAfter: _lastDocument);
-      feedItems.addAll(page.items);
-      _lastDocument = page.lastDocument;
-      hasMore.value = page.hasMore;
+      _currentPage += 1;
+      final page = await _repository.fetchFeed(page: _currentPage);
+      feedItems.addAll(page);
+      hasMore.value = page.length == HomeMockRepository.pageSize;
     } finally {
       isLoading.value = false;
     }
   }
 
   Future<void> vote(CaseModel caseModel, String option) async {
-    isVoting.value = true;
-    selectedVote.value = option;
+    if (caseModel.userVote != null) {
+      return;
+    }
+
+    busyVotes[caseModel.id] = true;
     try {
-      final results = await _voteRepository.vote(
-        caseId: caseModel.id,
-        option: option,
-      );
-      voteResult.assignAll(results);
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+      final results = _nextResults(caseModel.results, option);
       final index = feedItems.indexWhere((item) => item.id == caseModel.id);
       if (index >= 0) {
         feedItems[index] = feedItems[index].copyWith(
@@ -111,24 +91,18 @@ class HomeController extends GetxController {
           votesCount: caseModel.votesCount + 1,
         );
       }
-      await _analyticsService.logEvent(
-        AnalyticsEvents.caseVote,
-        parameters: {
-          'case_id': caseModel.id,
-          'vote_option': option,
-          'category': caseModel.category,
-          'relationship_type': caseModel.relationshipType,
-        },
-      );
-      await _adService.registerVote();
-      await _adService.maybeShowInterstitial();
     } finally {
-      isVoting.value = false;
+      busyVotes[caseModel.id] = false;
     }
   }
 
-  Future<void> saveCase(CaseModel caseModel) =>
-      _caseRepository.saveCase(caseModel.id);
+  void toggleSaveCase(CaseModel caseModel) {
+    if (savedCaseIds.contains(caseModel.id)) {
+      savedCaseIds.remove(caseModel.id);
+    } else {
+      savedCaseIds.add(caseModel.id);
+    }
+  }
 
   Future<void> shareCase(CaseModel caseModel) {
     return _shareService.shareText(
@@ -139,5 +113,21 @@ class HomeController extends GetxController {
 
   void openCase(CaseModel caseModel) {
     selectedCase.value = caseModel;
+  }
+
+  void toggleExpanded(String caseId) {
+    expandedCaseIds[caseId] = !(expandedCaseIds[caseId] ?? false);
+  }
+
+  bool isSaved(String caseId) => savedCaseIds.contains(caseId);
+
+  bool isExpanded(String caseId) => expandedCaseIds[caseId] ?? false;
+
+  bool isVoteBusy(String caseId) => busyVotes[caseId] ?? false;
+
+  Map<String, int> _nextResults(Map<String, int> current, String option) {
+    final updated = Map<String, int>.from(current);
+    updated[option] = (updated[option] ?? 0) + 1;
+    return updated;
   }
 }

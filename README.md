@@ -1,6 +1,6 @@
 # verdict
 
-Verdict - Relationship jury
+Verdict - Relationship Jury
 
 ## Getting Started
 

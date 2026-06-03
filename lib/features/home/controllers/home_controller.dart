@@ -1,19 +1,32 @@
 import 'package:get/get.dart';
 
 import '../../../core/services/share_service.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../data/models/case_model.dart';
-import '../repositories/home_mock_repository.dart';
+import '../../../data/repositories/case_repository.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../../data/repositories/vote_repository.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum FeedState { loading, success, empty, error }
 
 class HomeController extends GetxController {
   HomeController({
-    required HomeMockRepository repository,
+    required CaseRepository caseRepository,
+    required VoteRepository voteRepository,
+    required UserRepository userRepository,
+    required AuthService authService,
     required ShareService shareService,
-  }) : _repository = repository,
+  }) : _caseRepository = caseRepository,
+       _voteRepository = voteRepository,
+       _userRepository = userRepository,
+       _authService = authService,
        _shareService = shareService;
 
-  final HomeMockRepository _repository;
+  final CaseRepository _caseRepository;
+  final VoteRepository _voteRepository;
+  final UserRepository _userRepository;
+  final AuthService _authService;
   final ShareService _shareService;
 
   final RxList<CaseModel> feedItems = <CaseModel>[].obs;
@@ -25,7 +38,7 @@ class HomeController extends GetxController {
   final RxSet<String> savedCaseIds = <String>{}.obs;
   final RxMap<String, bool> expandedCaseIds = <String, bool>{}.obs;
   final RxMap<String, bool> busyVotes = <String, bool>{}.obs;
-  int _currentPage = 0;
+  DocumentSnapshot<Map<String, dynamic>>? _lastDocument;
 
   @override
   void onInit() {
@@ -37,11 +50,16 @@ class HomeController extends GetxController {
     isLoading.value = true;
     feedState.value = FeedState.loading;
     try {
-      _currentPage = 0;
-      final page = await _repository.fetchFeed(page: _currentPage);
-      feedItems.assignAll(page);
-      hasMore.value = page.length == HomeMockRepository.pageSize;
-      feedState.value = page.isEmpty ? FeedState.empty : FeedState.success;
+      _lastDocument = null;
+      final page = await _caseRepository.getFeed();
+      final hydratedItems = await _hydrateFeed(page.items);
+      feedItems.assignAll(hydratedItems);
+      _lastDocument = page.lastDocument;
+      hasMore.value = page.hasMore;
+      await _refreshSavedStates();
+      feedState.value = hydratedItems.isEmpty
+          ? FeedState.empty
+          : FeedState.success;
     } catch (_) {
       feedState.value = FeedState.error;
     } finally {
@@ -59,16 +77,18 @@ class HomeController extends GetxController {
   }
 
   Future<void> loadMore() async {
-    if (isLoading.value || !hasMore.value) {
+    if (isLoading.value || !hasMore.value || _lastDocument == null) {
       return;
     }
 
     isLoading.value = true;
     try {
-      _currentPage += 1;
-      final page = await _repository.fetchFeed(page: _currentPage);
-      feedItems.addAll(page);
-      hasMore.value = page.length == HomeMockRepository.pageSize;
+      final page = await _caseRepository.getFeed(startAfter: _lastDocument);
+      final hydratedItems = await _hydrateFeed(page.items);
+      feedItems.addAll(hydratedItems);
+      _lastDocument = page.lastDocument;
+      hasMore.value = page.hasMore;
+      await _refreshSavedStates();
     } finally {
       isLoading.value = false;
     }
@@ -81,8 +101,10 @@ class HomeController extends GetxController {
 
     busyVotes[caseModel.id] = true;
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 180));
-      final results = _nextResults(caseModel.results, option);
+      final results = await _voteRepository.vote(
+        caseId: caseModel.id,
+        option: option,
+      );
       final index = feedItems.indexWhere((item) => item.id == caseModel.id);
       if (index >= 0) {
         feedItems[index] = feedItems[index].copyWith(
@@ -96,7 +118,8 @@ class HomeController extends GetxController {
     }
   }
 
-  void toggleSaveCase(CaseModel caseModel) {
+  Future<void> toggleSaveCase(CaseModel caseModel) async {
+    await _caseRepository.saveCase(caseModel.id);
     if (savedCaseIds.contains(caseModel.id)) {
       savedCaseIds.remove(caseModel.id);
     } else {
@@ -125,9 +148,31 @@ class HomeController extends GetxController {
 
   bool isVoteBusy(String caseId) => busyVotes[caseId] ?? false;
 
-  Map<String, int> _nextResults(Map<String, int> current, String option) {
-    final updated = Map<String, int>.from(current);
-    updated[option] = (updated[option] ?? 0) + 1;
-    return updated;
+  Future<List<CaseModel>> _hydrateFeed(List<CaseModel> items) async {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null || items.isEmpty) {
+      return items;
+    }
+
+    final votes = await _voteRepository.getVotesForCases(
+      userId: currentUser.uid,
+      caseIds: items.map((item) => item.id),
+    );
+
+    return items
+        .map((item) => item.copyWith(userVote: votes[item.id]?.option))
+        .toList(growable: false);
+  }
+
+  Future<void> _refreshSavedStates() async {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) {
+      savedCaseIds.clear();
+      return;
+    }
+
+    savedCaseIds
+      ..clear()
+      ..addAll(await _userRepository.getSavedCaseIds(currentUser.uid));
   }
 }

@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'firestore_value_parser.dart';
+
 class CaseModel extends Equatable {
   const CaseModel({
     required this.id,
@@ -14,6 +16,11 @@ class CaseModel extends Equatable {
     required this.results,
     this.hotScore = 0,
     this.userVote,
+    this.viewsCount = 0,
+    this.savesCount = 0,
+    this.sharesCount = 0,
+    this.winnerOption,
+    this.resultVisible = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -30,6 +37,11 @@ class CaseModel extends Equatable {
   final Map<String, int> results;
   final double hotScore;
   final String? userVote;
+  final int viewsCount;
+  final int savesCount;
+  final int sharesCount;
+  final String? winnerOption;
+  final bool resultVisible;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -48,6 +60,11 @@ class CaseModel extends Equatable {
     Map<String, int>? results,
     double? hotScore,
     String? userVote,
+    int? viewsCount,
+    int? savesCount,
+    int? sharesCount,
+    String? winnerOption,
+    bool? resultVisible,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -64,6 +81,11 @@ class CaseModel extends Equatable {
       results: results ?? this.results,
       hotScore: hotScore ?? this.hotScore,
       userVote: userVote ?? this.userVote,
+      viewsCount: viewsCount ?? this.viewsCount,
+      savesCount: savesCount ?? this.savesCount,
+      sharesCount: sharesCount ?? this.sharesCount,
+      winnerOption: winnerOption ?? this.winnerOption,
+      resultVisible: resultVisible ?? this.resultVisible,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -83,8 +105,13 @@ class CaseModel extends Equatable {
       results: Map<String, int>.from(map['results'] as Map? ?? const {}),
       hotScore: (map['hotScore'] as num? ?? 0).toDouble(),
       userVote: map['userVote'] as String?,
-      createdAt: _toDateTime(map['createdAt']),
-      updatedAt: _toDateTime(map['updatedAt']),
+      viewsCount: map['viewsCount'] as int? ?? 0,
+      savesCount: map['savesCount'] as int? ?? 0,
+      sharesCount: map['sharesCount'] as int? ?? 0,
+      winnerOption: map['winnerOption'] as String?,
+      resultVisible: map['resultVisible'] as bool? ?? false,
+      createdAt: parseFirestoreDate(map['createdAt']),
+      updatedAt: parseFirestoreDate(map['updatedAt']),
     );
   }
 
@@ -101,8 +128,13 @@ class CaseModel extends Equatable {
       'results': results,
       'hotScore': hotScore,
       'userVote': userVote,
-      'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
+      'viewsCount': viewsCount,
+      'savesCount': savesCount,
+      'sharesCount': sharesCount,
+      'winnerOption': winnerOption,
+      'resultVisible': resultVisible,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
     };
   }
 
@@ -120,24 +152,12 @@ class CaseModel extends Equatable {
     results,
     hotScore,
     userVote,
+    viewsCount,
+    savesCount,
+    sharesCount,
+    winnerOption,
+    resultVisible,
     createdAt,
     updatedAt,
   ];
-}
-
-DateTime? _toDateTime(dynamic value) {
-  if (value is DateTime) {
-    return value;
-  }
-  if (value == null) {
-    return null;
-  }
-  if (value is String) {
-    return DateTime.tryParse(value);
-  }
-  final seconds = (value as dynamic).seconds;
-  if (seconds is int) {
-    return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
-  }
-  return null;
 }

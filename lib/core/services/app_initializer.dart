@@ -19,6 +19,7 @@ import '../../data/repositories/case_repository.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../data/repositories/premium_repository.dart';
 import '../../data/repositories/report_repository.dart';
+import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/vote_repository.dart';
 import '../constants/app_constants.dart';
 import 'ad_service.dart';
@@ -26,6 +27,7 @@ import 'analytics_service.dart';
 import 'app_state_service.dart';
 import 'auth_service.dart';
 import 'crashlytics_service.dart';
+import 'firebase_platform_options.dart';
 import 'notification_service.dart';
 import 'premium_service.dart';
 import 'remote_config_service.dart';
@@ -46,7 +48,9 @@ class AppInitializer {
   }
 
   Future<void> _initializeFirebase() async {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: FirebasePlatformOptions.currentPlatform,
+    );
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
     );
@@ -62,7 +66,9 @@ class AppInitializer {
       permanent: true,
     );
     Get.put(
-      FunctionsDataSource(functions: FirebaseFunctions.instance),
+      FunctionsDataSource(
+        functions: FirebaseFunctions.instanceFor(region: 'us-central1'),
+      ),
       permanent: true,
     );
   }
@@ -74,21 +80,33 @@ class AppInitializer {
     );
     Get.put(
       CaseRepository(
+        authDataSource: Get.find<FirebaseAuthDataSource>(),
         firestoreDataSource: Get.find<FirestoreDataSource>(),
         functionsDataSource: Get.find<FunctionsDataSource>(),
       ),
       permanent: true,
     );
     Get.put(
-      VoteRepository(functionsDataSource: Get.find<FunctionsDataSource>()),
+      UserRepository(firestoreDataSource: Get.find<FirestoreDataSource>()),
       permanent: true,
     );
     Get.put(
-      ReportRepository(functionsDataSource: Get.find<FunctionsDataSource>()),
+      VoteRepository(
+        firestoreDataSource: Get.find<FirestoreDataSource>(),
+        functionsDataSource: Get.find<FunctionsDataSource>(),
+      ),
+      permanent: true,
+    );
+    Get.put(
+      ReportRepository(
+        firestoreDataSource: Get.find<FirestoreDataSource>(),
+        functionsDataSource: Get.find<FunctionsDataSource>(),
+      ),
       permanent: true,
     );
     Get.put(
       NotificationRepository(
+        authDataSource: Get.find<FirebaseAuthDataSource>(),
         firestoreDataSource: Get.find<FirestoreDataSource>(),
         functionsDataSource: Get.find<FunctionsDataSource>(),
       ),
@@ -116,7 +134,10 @@ class AppInitializer {
     await remoteConfigService.init();
     Get.put(remoteConfigService, permanent: true);
 
-    final authService = AuthService(repository: Get.find<AuthRepository>());
+    final authService = AuthService(
+      repository: Get.find<AuthRepository>(),
+      userRepository: Get.find<UserRepository>(),
+    );
     await authService.init();
     Get.put(authService, permanent: true);
 

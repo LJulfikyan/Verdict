@@ -1,15 +1,19 @@
 import '../../core/constants/api_constants.dart';
+import '../datasources/firebase_auth_datasource.dart';
 import '../datasources/firestore_datasource.dart';
 import '../datasources/functions_datasource.dart';
 import '../models/notification_model.dart';
 
 class NotificationRepository {
   NotificationRepository({
+    required FirebaseAuthDataSource authDataSource,
     required FirestoreDataSource firestoreDataSource,
     required FunctionsDataSource functionsDataSource,
-  }) : _firestoreDataSource = firestoreDataSource,
+  }) : _authDataSource = authDataSource,
+       _firestoreDataSource = firestoreDataSource,
        _functionsDataSource = functionsDataSource;
 
+  final FirebaseAuthDataSource _authDataSource;
   final FirestoreDataSource _firestoreDataSource;
   final FunctionsDataSource _functionsDataSource;
 
@@ -24,7 +28,19 @@ class NotificationRepository {
   }
 
   Future<void> markRead(String notificationId) async {
-    await _functionsDataSource.call(
+    final currentUser = _authDataSource.currentUser;
+    if (currentUser == null) {
+      throw StateError('User must be authenticated to update notifications.');
+    }
+    await _firestoreDataSource.updateNotificationRead(
+      userId: currentUser.uid,
+      notificationId: notificationId,
+      isRead: true,
+    );
+  }
+
+  Future<void> markReadViaFunction(String notificationId) {
+    return _functionsDataSource.call(
       ApiConstants.markNotificationRead,
       parameters: {'notificationId': notificationId},
     );

@@ -5,11 +5,17 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/user_repository.dart';
 
 class AuthService extends GetxService with ChangeNotifier {
-  AuthService({required AuthRepository repository}) : _repository = repository;
+  AuthService({
+    required AuthRepository repository,
+    required UserRepository userRepository,
+  }) : _repository = repository,
+       _userRepository = userRepository;
 
   final AuthRepository _repository;
+  final UserRepository _userRepository;
 
   final Rxn<User> _currentUser = Rxn<User>();
   StreamSubscription<User?>? _subscription;
@@ -20,11 +26,19 @@ class AuthService extends GetxService with ChangeNotifier {
 
   Future<AuthService> init() async {
     await _repository.initializeGoogleSignIn();
-    _subscription = _repository.authStateChanges().listen((user) {
+    _subscription = _repository.authStateChanges().listen((user) async {
       _currentUser.value = user;
+      if (user != null) {
+        await _userRepository.createOrUpdateFromAuthUser(user);
+        await _userRepository.updateLastSeen(user.uid);
+      }
       notifyListeners();
     });
     _currentUser.value = _repository.currentUser;
+    if (_currentUser.value != null) {
+      await _userRepository.createOrUpdateFromAuthUser(_currentUser.value!);
+      await _userRepository.updateLastSeen(_currentUser.value!.uid);
+    }
     return this;
   }
 

@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'firestore_value_parser.dart';
+
 class ReportModel extends Equatable {
   const ReportModel({
     required this.caseId,
@@ -18,7 +20,7 @@ class ReportModel extends Equatable {
       caseId: map['caseId'] as String? ?? '',
       reason: map['reason'] as String? ?? '',
       reporterId: map['reporterId'] as String? ?? '',
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? ''),
+      createdAt: parseFirestoreDate(map['createdAt']),
     );
   }
 
@@ -27,7 +29,7 @@ class ReportModel extends Equatable {
       'caseId': caseId,
       'reason': reason,
       'reporterId': reporterId,
-      'createdAt': createdAt?.toIso8601String(),
+      'createdAt': createdAt,
     };
   }
 

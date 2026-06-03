@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'firestore_value_parser.dart';
+
 class VoteModel extends Equatable {
   const VoteModel({
     required this.caseId,
@@ -18,7 +20,7 @@ class VoteModel extends Equatable {
       caseId: map['caseId'] as String? ?? '',
       userId: map['userId'] as String? ?? '',
       option: map['option'] as String? ?? '',
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? ''),
+      createdAt: parseFirestoreDate(map['createdAt']),
     );
   }
 
@@ -27,7 +29,7 @@ class VoteModel extends Equatable {
       'caseId': caseId,
       'userId': userId,
       'option': option,
-      'createdAt': createdAt?.toIso8601String(),
+      'createdAt': createdAt,
     };
   }
 

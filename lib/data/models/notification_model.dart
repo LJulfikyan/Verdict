@@ -1,11 +1,14 @@
 import 'package:equatable/equatable.dart';
 
+import 'firestore_value_parser.dart';
+
 class NotificationModel extends Equatable {
   const NotificationModel({
     required this.id,
     required this.title,
     required this.body,
-    required this.targetRoute,
+    required this.type,
+    required this.targetId,
     this.isRead = false,
     this.createdAt,
   });
@@ -13,7 +16,8 @@ class NotificationModel extends Equatable {
   final String id;
   final String title;
   final String body;
-  final String targetRoute;
+  final String type;
+  final String targetId;
   final bool isRead;
   final DateTime? createdAt;
 
@@ -21,7 +25,8 @@ class NotificationModel extends Equatable {
     String? id,
     String? title,
     String? body,
-    String? targetRoute,
+    String? type,
+    String? targetId,
     bool? isRead,
     DateTime? createdAt,
   }) {
@@ -29,7 +34,8 @@ class NotificationModel extends Equatable {
       id: id ?? this.id,
       title: title ?? this.title,
       body: body ?? this.body,
-      targetRoute: targetRoute ?? this.targetRoute,
+      type: type ?? this.type,
+      targetId: targetId ?? this.targetId,
       isRead: isRead ?? this.isRead,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -43,9 +49,10 @@ class NotificationModel extends Equatable {
       id: id,
       title: map['title'] as String? ?? '',
       body: map['body'] as String? ?? '',
-      targetRoute: map['targetRoute'] as String? ?? '',
+      type: map['type'] as String? ?? '',
+      targetId: map['targetId'] as String? ?? '',
       isRead: map['isRead'] as bool? ?? false,
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? ''),
+      createdAt: parseFirestoreDate(map['createdAt']),
     );
   }
 
@@ -53,12 +60,21 @@ class NotificationModel extends Equatable {
     return {
       'title': title,
       'body': body,
-      'targetRoute': targetRoute,
+      'type': type,
+      'targetId': targetId,
       'isRead': isRead,
-      'createdAt': createdAt?.toIso8601String(),
+      'createdAt': createdAt,
     };
   }
 
   @override
-  List<Object?> get props => [id, title, body, targetRoute, isRead, createdAt];
+  List<Object?> get props => [
+    id,
+    title,
+    body,
+    type,
+    targetId,
+    isRead,
+    createdAt,
+  ];
 }

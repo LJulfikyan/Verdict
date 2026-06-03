@@ -1,20 +1,22 @@
 import 'package:get/get.dart';
 
+import '../../../core/services/auth_service.dart';
 import '../../../core/services/share_service.dart';
+import '../../../data/repositories/case_repository.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../../data/repositories/vote_repository.dart';
 import '../controllers/home_controller.dart';
-import '../repositories/home_mock_repository.dart';
 
 class HomeBinding extends Bindings {
   @override
   void dependencies() {
-    if (!Get.isRegistered<HomeMockRepository>()) {
-      Get.put(HomeMockRepository(), permanent: true);
-    }
-
     if (!Get.isRegistered<HomeController>()) {
       Get.lazyPut<HomeController>(
         () => HomeController(
-          repository: Get.find<HomeMockRepository>(),
+          caseRepository: Get.find<CaseRepository>(),
+          voteRepository: Get.find<VoteRepository>(),
+          userRepository: Get.find<UserRepository>(),
+          authService: Get.find<AuthService>(),
           shareService: Get.find<ShareService>(),
         ),
         fenix: true,

@@ -14,6 +14,11 @@ abstract final class AnalyticsEvents {
   static const profileOpened = 'profile_opened';
   static const savedCasesOpened = 'saved_cases_opened';
   static const premiumBannerClicked = 'premium_banner_clicked';
+  static const settingsOpened = 'settings_opened';
+  static const caseDetailOpened = 'case_detail_opened';
+  static const editProfileOpened = 'edit_profile_opened';
+  static const profileUpdated = 'profile_updated';
+  static const logout = 'logout';
   static const notificationReceived = 'notification_received';
   static const notificationOpened = 'notification_opened';
   static const notificationDismissed = 'notification_dismissed';

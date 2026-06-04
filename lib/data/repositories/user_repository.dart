@@ -133,6 +133,22 @@ class UserRepository {
     });
   }
 
+  Future<void> updateProfile({
+    required String userId,
+    required String displayName,
+    required String country,
+    required String gender,
+    required String ageRange,
+  }) {
+    return _firestoreDataSource.setUserFields(userId, {
+      'displayName': displayName,
+      'country': country.isEmpty ? null : country,
+      'gender': gender.isEmpty ? null : gender,
+      'ageRange': ageRange.isEmpty ? null : ageRange,
+      'lastSeenAt': DateTime.now(),
+    });
+  }
+
   int? _readIntIfPresent(Map<String, dynamic> data, String key) {
     if (!data.containsKey(key)) {
       return null;

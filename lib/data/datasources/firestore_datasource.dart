@@ -64,6 +64,10 @@ class FirestoreDataSource {
     return usersCollection.doc(userId).update(data);
   }
 
+  Future<void> setUserFields(String userId, Map<String, dynamic> data) {
+    return usersCollection.doc(userId).set(data, SetOptions(merge: true));
+  }
+
   CollectionReference<Map<String, dynamic>> savedCasesCollection(
     String userId,
   ) {

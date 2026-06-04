@@ -3,10 +3,8 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 
-import '../../../core/constants/analytics_events.dart';
-import '../../../core/services/analytics_service.dart';
-import '../../../core/services/share_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/case_action_service.dart';
 import '../../../data/models/case_model.dart';
 import '../../../data/repositories/case_repository.dart';
 import '../../../data/repositories/user_repository.dart';
@@ -20,21 +18,18 @@ class HomeController extends GetxController {
     required VoteRepository voteRepository,
     required UserRepository userRepository,
     required AuthService authService,
-    required AnalyticsService analyticsService,
-    required ShareService shareService,
+    required CaseActionService caseActionService,
   }) : _caseRepository = caseRepository,
        _voteRepository = voteRepository,
        _userRepository = userRepository,
        _authService = authService,
-       _analyticsService = analyticsService,
-       _shareService = shareService;
+       _caseActionService = caseActionService;
 
   final CaseRepository _caseRepository;
   final VoteRepository _voteRepository;
   final UserRepository _userRepository;
   final AuthService _authService;
-  final AnalyticsService _analyticsService;
-  final ShareService _shareService;
+  final CaseActionService _caseActionService;
 
   final RxList<CaseModel> feedItems = <CaseModel>[].obs;
   final RxBool isLoading = false.obs;
@@ -118,8 +113,8 @@ class HomeController extends GetxController {
     busyVotes[caseModel.id] = true;
     pendingVoteOptions[caseModel.id] = option;
     try {
-      final result = await _voteRepository.vote(
-        caseId: caseModel.id,
+      final result = await _caseActionService.vote(
+        caseModel: caseModel,
         option: option,
       );
       final index = feedItems.indexWhere((item) => item.id == caseModel.id);
@@ -133,24 +128,8 @@ class HomeController extends GetxController {
         );
         feedItems.refresh();
       }
-      await _analyticsService.logEvent(
-        AnalyticsEvents.caseVote,
-        parameters: {
-          'vote_option': option,
-          'relationship_type': caseModel.relationshipType,
-          'category': caseModel.category,
-        },
-      );
-      await _analyticsService.logEvent(
-        AnalyticsEvents.voteOption,
-        parameters: {
-          'vote_option': option,
-          'relationship_type': caseModel.relationshipType,
-          'category': caseModel.category,
-        },
-      );
     } on FirebaseException catch (error) {
-      voteErrors[caseModel.id] = _mapVoteError(error);
+      voteErrors[caseModel.id] = _caseActionService.mapVoteError(error);
       Get.snackbar('Vote failed', voteErrors[caseModel.id]!);
     } catch (_) {
       voteErrors[caseModel.id] = 'Could not submit your vote right now.';
@@ -162,19 +141,20 @@ class HomeController extends GetxController {
   }
 
   Future<void> toggleSaveCase(CaseModel caseModel) async {
-    await _caseRepository.saveCase(caseModel.id);
-    if (savedCaseIds.contains(caseModel.id)) {
-      savedCaseIds.remove(caseModel.id);
-    } else {
+    final currentlySaved = savedCaseIds.contains(caseModel.id);
+    final isNowSaved = await _caseActionService.toggleSaveCase(
+      caseModel: caseModel,
+      isCurrentlySaved: currentlySaved,
+    );
+    if (isNowSaved) {
       savedCaseIds.add(caseModel.id);
+      return;
     }
+    savedCaseIds.remove(caseModel.id);
   }
 
   Future<void> shareCase(CaseModel caseModel) {
-    return _shareService.shareText(
-      '${caseModel.question}\n\n${caseModel.description}',
-      subject: 'Verdict case',
-    );
+    return _caseActionService.shareCase(caseModel);
   }
 
   void openCase(CaseModel caseModel) {
@@ -255,23 +235,6 @@ class HomeController extends GetxController {
     final previous = feedItems[index];
     feedItems[index] = latest.copyWith(userVote: previous.userVote);
     feedItems.refresh();
-  }
-
-  String _mapVoteError(FirebaseException error) {
-    switch (error.code) {
-      case 'already-exists':
-        return 'You already voted on this case.';
-      case 'not-found':
-      case 'failed-precondition':
-        return 'This case is no longer available.';
-      case 'permission-denied':
-      case 'unauthenticated':
-        return 'You do not have permission to vote on this case.';
-      case 'unavailable':
-        return 'Network unavailable. Try again.';
-      default:
-        return 'Could not submit your vote right now.';
-    }
   }
 
   void _disposeCaseSubscriptions() {

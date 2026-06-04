@@ -28,6 +28,7 @@ import 'ad_service.dart';
 import 'analytics_service.dart';
 import 'app_state_service.dart';
 import 'auth_service.dart';
+import 'case_action_service.dart';
 import 'crashlytics_service.dart';
 import 'notification_service.dart';
 import 'premium_service.dart';
@@ -175,5 +176,14 @@ class AppInitializer {
     Get.put(adService, permanent: true);
 
     Get.put(ShareService(), permanent: true);
+    Get.put(
+      CaseActionService(
+        caseRepository: Get.find<CaseRepository>(),
+        voteRepository: Get.find<VoteRepository>(),
+        analyticsService: analyticsService,
+        shareService: Get.find<ShareService>(),
+      ),
+      permanent: true,
+    );
   }
 }

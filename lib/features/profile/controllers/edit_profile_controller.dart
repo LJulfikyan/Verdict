@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../core/constants/analytics_events.dart';
 import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/debug_logger.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/user_repository.dart';
 
@@ -67,7 +68,14 @@ class EditProfileController extends GetxController {
     try {
       final user = await _userRepository.getUser(userId);
       _applyUser(user);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Profile',
+        className: 'EditProfileController',
+        method: 'loadProfile',
+        error: error,
+        stackTrace: stackTrace,
+      );
       errorMessage.value = 'Could not load your profile right now.';
     } finally {
       isLoading.value = false;
@@ -97,7 +105,20 @@ class EditProfileController extends GetxController {
       );
       await _analyticsService.logEvent(AnalyticsEvents.profileUpdated);
       return true;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Profile',
+        className: 'EditProfileController',
+        method: 'save',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {
+          'displayName': displayNameController.text.trim(),
+          'country': countryController.text.trim(),
+          'gender': selectedGender.value,
+          'ageRange': selectedAgeRange.value,
+        },
+      );
       errorMessage.value = 'Could not save your profile right now.';
       return false;
     } finally {

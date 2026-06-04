@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../../core/constants/analytics_events.dart';
 import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/debug_logger.dart';
 
 class SettingsController extends GetxController {
   SettingsController({
@@ -37,7 +38,14 @@ class SettingsController extends GetxController {
       final packageInfo = await PackageInfo.fromPlatform();
       appVersion.value = '${packageInfo.version} (${packageInfo.buildNumber})';
       await _analyticsService.logEvent(AnalyticsEvents.settingsOpened);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Settings',
+        className: 'SettingsController',
+        method: '_initialize',
+        error: error,
+        stackTrace: stackTrace,
+      );
       appVersion.value = '1.0.0+1';
       errorMessage.value = 'Could not load full settings metadata.';
     } finally {

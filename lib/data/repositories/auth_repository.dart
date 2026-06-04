@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/services/debug_logger.dart';
 import '../datasources/firebase_auth_datasource.dart';
 
 class AuthRepository {
@@ -25,6 +26,16 @@ class AuthRepository {
       return;
     }
 
+    DebugLogger.logInfo(
+      module: 'Auth',
+      className: 'AuthRepository',
+      method: 'initializeGoogleSignIn',
+      message: 'Initializing Google Sign-In',
+      additionalDetails: {
+        'webClientIdSet': AppConstants.googleWebClientId.isNotEmpty,
+        'serverClientIdSet': AppConstants.googleServerClientId.isNotEmpty,
+      },
+    );
     await GoogleSignIn.instance.initialize(
       clientId: AppConstants.googleWebClientId.isEmpty
           ? null
@@ -46,21 +57,43 @@ class AuthRepository {
       );
     }
 
-    final googleUser = await GoogleSignIn.instance.authenticate();
-    final googleAuth = googleUser.authentication;
+    try {
+      final googleUser = await GoogleSignIn.instance.authenticate();
+      final googleAuth = googleUser.authentication;
 
-    if (googleAuth.idToken == null) {
-      throw StateError('Google Sign-In did not return an ID token.');
+      if (googleAuth.idToken == null) {
+        throw StateError('Google Sign-In did not return an ID token.');
+      }
+
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
+      await _dataSource.signInWithCredential(credential);
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Auth',
+        className: 'AuthRepository',
+        method: 'signInWithGoogle',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
     }
-
-    final credential = GoogleAuthProvider.credential(
-      idToken: googleAuth.idToken,
-    );
-    await _dataSource.signInWithCredential(credential);
   }
 
   Future<void> signInWithApple() async {
-    final provider = AppleAuthProvider()..addScope('email');
-    await _dataSource.signInWithProvider(provider);
+    try {
+      final provider = AppleAuthProvider()..addScope('email');
+      await _dataSource.signInWithProvider(provider);
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Auth',
+        className: 'AuthRepository',
+        method: 'signInWithApple',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
   }
 }

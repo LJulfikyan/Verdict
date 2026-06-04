@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/case_action_service.dart';
+import '../../../core/services/debug_logger.dart';
 import '../../../data/models/case_model.dart';
 import '../../../data/repositories/case_repository.dart';
 import '../../../data/repositories/user_repository.dart';
@@ -54,6 +55,12 @@ class HomeController extends GetxController {
   }
 
   Future<void> loadFeed() async {
+    DebugLogger.logInfo(
+      module: 'Feed',
+      className: 'HomeController',
+      method: 'loadFeed',
+      message: 'Feed loading started',
+    );
     isLoading.value = true;
     feedState.value = FeedState.loading;
     try {
@@ -69,10 +76,24 @@ class HomeController extends GetxController {
       feedState.value = hydratedItems.isEmpty
           ? FeedState.empty
           : FeedState.success;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Feed',
+        className: 'HomeController',
+        method: 'loadFeed',
+        error: error,
+        stackTrace: stackTrace,
+      );
       feedState.value = FeedState.error;
     } finally {
       isLoading.value = false;
+      DebugLogger.logState(
+        module: 'Feed',
+        className: 'HomeController',
+        method: 'loadFeed',
+        state: 'feedState',
+        to: feedState.value,
+      );
     }
   }
 
@@ -128,10 +149,26 @@ class HomeController extends GetxController {
         );
         feedItems.refresh();
       }
-    } on FirebaseException catch (error) {
+    } on FirebaseException catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Feed',
+        className: 'HomeController',
+        method: 'vote',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'caseId': caseModel.id, 'option': option},
+      );
       voteErrors[caseModel.id] = _caseActionService.mapVoteError(error);
       Get.snackbar('Vote failed', voteErrors[caseModel.id]!);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Feed',
+        className: 'HomeController',
+        method: 'vote',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'caseId': caseModel.id, 'option': option},
+      );
       voteErrors[caseModel.id] = 'Could not submit your vote right now.';
       Get.snackbar('Vote failed', voteErrors[caseModel.id]!);
     } finally {
@@ -142,15 +179,27 @@ class HomeController extends GetxController {
 
   Future<void> toggleSaveCase(CaseModel caseModel) async {
     final currentlySaved = savedCaseIds.contains(caseModel.id);
-    final isNowSaved = await _caseActionService.toggleSaveCase(
-      caseModel: caseModel,
-      isCurrentlySaved: currentlySaved,
-    );
-    if (isNowSaved) {
-      savedCaseIds.add(caseModel.id);
-      return;
+    try {
+      final isNowSaved = await _caseActionService.toggleSaveCase(
+        caseModel: caseModel,
+        isCurrentlySaved: currentlySaved,
+      );
+      if (isNowSaved) {
+        savedCaseIds.add(caseModel.id);
+        return;
+      }
+      savedCaseIds.remove(caseModel.id);
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Feed',
+        className: 'HomeController',
+        method: 'toggleSaveCase',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'caseId': caseModel.id},
+      );
+      rethrow;
     }
-    savedCaseIds.remove(caseModel.id);
   }
 
   Future<void> shareCase(CaseModel caseModel) {

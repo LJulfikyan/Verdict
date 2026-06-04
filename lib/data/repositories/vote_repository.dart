@@ -1,4 +1,5 @@
 import '../../core/constants/api_constants.dart';
+import '../../core/services/debug_logger.dart';
 import '../datasources/firestore_datasource.dart';
 import '../datasources/functions_datasource.dart';
 import '../models/vote_model.dart';
@@ -18,11 +19,23 @@ class VoteRepository {
     required String caseId,
     required String option,
   }) async {
-    final result = await _functionsDataSource.call(
-      ApiConstants.voteCase,
-      parameters: {'caseId': caseId, 'option': option},
-    );
-    return VoteSubmissionResult.fromMap(result);
+    try {
+      final result = await _functionsDataSource.call(
+        ApiConstants.voteCase,
+        parameters: {'caseId': caseId, 'option': option},
+      );
+      return VoteSubmissionResult.fromMap(result);
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Repository',
+        className: 'VoteRepository',
+        method: 'vote',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'caseId': caseId, 'option': option},
+      );
+      rethrow;
+    }
   }
 
   Stream<VoteModel?> watchVote({

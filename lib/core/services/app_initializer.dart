@@ -30,6 +30,7 @@ import 'app_state_service.dart';
 import 'auth_service.dart';
 import 'case_action_service.dart';
 import 'crashlytics_service.dart';
+import 'debug_logger.dart';
 import 'notification_service.dart';
 import 'premium_service.dart';
 import 'remote_config_service.dart';
@@ -38,6 +39,23 @@ import 'share_service.dart';
 class AppInitializer {
   Future<void> initialize() async {
     final preferences = await SharedPreferences.getInstance();
+    DebugLogger.logInfo(
+      module: 'Startup',
+      className: 'AppInitializer',
+      method: 'initialize',
+      message: 'App initialization started',
+      additionalDetails: {
+        'platform': Platform.operatingSystem,
+        'isProduction': AppConstants.isProduction,
+        'revenueCatAndroidKeySet':
+            AppConstants.revenueCatAndroidApiKey.isNotEmpty,
+        'revenueCatIosKeySet': AppConstants.revenueCatIosApiKey.isNotEmpty,
+        'admobAndroidAppIdSet': AppConstants.admobAndroidAppId.isNotEmpty,
+        'admobIosAppIdSet': AppConstants.admobIosAppId.isNotEmpty,
+        'googleWebClientIdSet': AppConstants.googleWebClientId.isNotEmpty,
+        'googleServerClientIdSet': AppConstants.googleServerClientId.isNotEmpty,
+      },
+    );
     final appStateService = AppStateService(preferences: preferences);
     Get.put(appStateService, permanent: true);
 
@@ -47,14 +65,37 @@ class AppInitializer {
     await _registerServices();
 
     appStateService.markReady();
+    DebugLogger.logInfo(
+      module: 'Startup',
+      className: 'AppInitializer',
+      method: 'initialize',
+      message: 'App initialization completed',
+    );
   }
 
   Future<void> _initializeFirebase() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    DebugLogger.logInfo(
+      module: 'Startup',
+      className: 'AppInitializer',
+      method: '_initializeFirebase',
+      message: 'Firebase initialized',
+      additionalDetails: {
+        'projectId': Firebase.app().options.projectId,
+        'appId': Firebase.app().options.appId,
+      },
+    );
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
+    );
+    DebugLogger.logInfo(
+      module: 'Startup',
+      className: 'AppInitializer',
+      method: '_initializeFirebase',
+      message: 'Firestore persistence enabled',
+      additionalDetails: {'persistenceEnabled': true},
     );
   }
 
@@ -72,6 +113,13 @@ class AppInitializer {
         functions: FirebaseFunctions.instanceFor(region: 'us-central1'),
       ),
       permanent: true,
+    );
+    DebugLogger.logInfo(
+      module: 'Startup',
+      className: 'AppInitializer',
+      method: '_registerDataSources',
+      message: 'Functions initialized',
+      additionalDetails: {'region': 'us-central1'},
     );
     Get.put(
       NotificationDataSource(
@@ -148,6 +196,16 @@ class AppInitializer {
     );
     await authService.init();
     Get.put(authService, permanent: true);
+    DebugLogger.logInfo(
+      module: 'Startup',
+      className: 'AppInitializer',
+      method: '_registerServices',
+      message: 'Auth service initialized',
+      additionalDetails: {
+        'currentUser': authService.currentUser?.uid,
+        'isGuest': authService.isGuest,
+      },
+    );
 
     final notificationService = NotificationService(
       messaging: FirebaseMessaging.instance,
@@ -157,6 +215,13 @@ class AppInitializer {
     );
     await notificationService.init();
     Get.put(notificationService, permanent: true);
+    DebugLogger.logInfo(
+      module: 'Startup',
+      className: 'AppInitializer',
+      method: '_registerServices',
+      message: 'Notification service initialized',
+      additionalDetails: {'fcmToken': notificationService.fcmToken},
+    );
 
     final premiumService = PremiumService(
       repository: Get.find<PremiumRepository>(),
@@ -168,12 +233,26 @@ class AppInitializer {
           : AppConstants.revenueCatAndroidApiKey,
     );
     Get.put(premiumService, permanent: true);
+    DebugLogger.logInfo(
+      module: 'Startup',
+      className: 'AppInitializer',
+      method: '_registerServices',
+      message: 'RevenueCat initialized',
+      additionalDetails: {'isReady': premiumService.isReady},
+    );
 
     final adService = AdService(
       preferences: Get.find<AppStateService>().preferences,
     );
     await adService.init();
     Get.put(adService, permanent: true);
+    DebugLogger.logInfo(
+      module: 'Startup',
+      className: 'AppInitializer',
+      method: '_registerServices',
+      message: 'AdMob initialized',
+      additionalDetails: {'isConfigured': adService.isConfigured.value},
+    );
 
     Get.put(ShareService(), permanent: true);
     Get.put(

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../core/constants/analytics_events.dart';
 import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/debug_logger.dart';
 import '../../../core/services/premium_service.dart';
 import '../../../data/models/case_model.dart';
 import '../../../data/models/case_feed_page.dart';
@@ -116,7 +117,15 @@ class ProfileController extends GetxController {
         limit: 20,
       );
       _appendSavedCases(page, reset: isFirstPage && reset);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Profile',
+        className: 'ProfileController',
+        method: 'loadSavedCases',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'reset': reset},
+      );
       savedCasesError.value = 'Could not load saved cases right now.';
     } finally {
       isLoadingSavedCases.value = false;
@@ -135,7 +144,14 @@ class ProfileController extends GetxController {
         loadStatistics(),
         loadSavedCases(reset: true),
       ]);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Profile',
+        className: 'ProfileController',
+        method: 'refreshProfile',
+        error: error,
+        stackTrace: stackTrace,
+      );
       errorMessage.value = 'Could not load your profile right now.';
     } finally {
       isLoading.value = false;

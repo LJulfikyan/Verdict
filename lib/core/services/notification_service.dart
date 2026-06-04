@@ -14,6 +14,7 @@ import '../constants/analytics_events.dart';
 import '../routes/route_names.dart';
 import 'analytics_service.dart';
 import 'auth_service.dart';
+import 'debug_logger.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -48,10 +49,23 @@ class NotificationService extends GetxService {
 
   Future<NotificationService> init() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    DebugLogger.logInfo(
+      module: 'Notifications',
+      className: 'NotificationService',
+      method: 'init',
+      message: 'Initializing Firebase Messaging',
+    );
 
     await _messaging.requestPermission();
     _tokenRefreshSubscription = _messaging.onTokenRefresh.listen((token) {
       _fcmToken.value = token;
+      DebugLogger.logInfo(
+        module: 'Notifications',
+        className: 'NotificationService',
+        method: 'onTokenRefresh.listen',
+        message: 'FCM token refreshed',
+        additionalDetails: {'token': token},
+      );
       unawaited(_persistToken(token));
     });
 
@@ -142,10 +156,13 @@ class NotificationService extends GetxService {
         await _persistToken(_fcmToken.value);
       }
     } catch (error, stackTrace) {
-      debugPrint(
-        'NotificationService: failed to fetch initial FCM token: $error',
+      DebugLogger.logError(
+        module: 'Notifications',
+        className: 'NotificationService',
+        method: '_loadInitialToken',
+        error: error,
+        stackTrace: stackTrace,
       );
-      debugPrintStack(stackTrace: stackTrace);
     }
   }
 
@@ -168,8 +185,14 @@ class NotificationService extends GetxService {
     try {
       await _userRepository.updateMessagingToken(userId, token);
     } catch (error, stackTrace) {
-      debugPrint('NotificationService: failed to persist token: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      DebugLogger.logError(
+        module: 'Notifications',
+        className: 'NotificationService',
+        method: '_persistToken',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'userId': userId, 'token': token},
+      );
     }
   }
 
@@ -180,9 +203,24 @@ class NotificationService extends GetxService {
   void _navigateToRoute(String route) {
     final context = Get.context;
     if (context != null) {
+      DebugLogger.logNavigation(
+        module: 'Router',
+        className: 'NotificationService',
+        method: '_navigateToRoute',
+        currentRoute: GoRouter.of(context).state.matchedLocation,
+        targetRoute: route,
+      );
       GoRouter.of(context).go(route);
       return;
     }
+    DebugLogger.logNavigation(
+      module: 'Router',
+      className: 'NotificationService',
+      method: '_navigateToRoute',
+      currentRoute: 'unknown',
+      targetRoute: route,
+      status: 'deferred',
+    );
     _pendingRoute = route;
   }
 

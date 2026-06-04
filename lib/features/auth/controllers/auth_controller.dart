@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/debug_logger.dart';
 
 class AuthController extends GetxController {
   AuthController({required AuthService authService})
@@ -21,8 +22,22 @@ class AuthController extends GetxController {
   }
 
   void _syncState() {
+    final previousAuthenticated = isAuthenticated.value;
+    final previousGuest = isGuest.value;
     isGuest.value = _authService.isGuest;
     isAuthenticated.value = _authService.isAuthenticated;
+    DebugLogger.logState(
+      module: 'Auth',
+      className: 'AuthController',
+      method: '_syncState',
+      state: 'isAuthenticated',
+      from: previousAuthenticated,
+      to: isAuthenticated.value,
+      additionalDetails: {
+        'isGuest.from': previousGuest,
+        'isGuest.to': isGuest.value,
+      },
+    );
   }
 
   Future<void> loginGoogle() => _run(_authService.loginGoogle);
@@ -37,7 +52,14 @@ class AuthController extends GetxController {
     try {
       await action();
       _syncState();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Auth',
+        className: 'AuthController',
+        method: '_run',
+        error: error,
+        stackTrace: stackTrace,
+      );
       errorMessage.value = _mapError(error);
       rethrow;
     } finally {

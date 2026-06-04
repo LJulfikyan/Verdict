@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../../core/constants/analytics_events.dart';
 import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/debug_logger.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../data/repositories/notification_repository.dart';
@@ -54,12 +55,30 @@ class NotificationsController extends GetxController {
     }
     isLoading.value = true;
     _subscription?.cancel();
-    _subscription = _repository.notifications(userId).listen((items) {
-      notifications.assignAll(items);
-      unreadCount.value = items.where((item) => !item.isRead).length;
-      _notificationService.unreadCount.value = unreadCount.value;
-      isLoading.value = false;
-    });
+    _subscription = _repository
+        .notifications(userId)
+        .listen(
+          (items) {
+            notifications.assignAll(items);
+            unreadCount.value = items.where((item) => !item.isRead).length;
+            _notificationService.unreadCount.value = unreadCount.value;
+            isLoading.value = false;
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            DebugLogger.logError(
+              module: 'Notifications',
+              className: 'NotificationsController',
+              method: 'loadNotifications.listen',
+              error: error,
+              stackTrace: stackTrace,
+              additionalDetails: {'userId': userId},
+            );
+            notifications.clear();
+            unreadCount.value = 0;
+            _notificationService.unreadCount.value = 0;
+            isLoading.value = false;
+          },
+        );
   }
 
   Future<void> markRead(NotificationModel notification) async {

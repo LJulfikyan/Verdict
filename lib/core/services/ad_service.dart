@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_constants.dart';
+import 'debug_logger.dart';
 
 class AdService extends GetxService {
   AdService({required SharedPreferences preferences})
@@ -25,14 +25,23 @@ class AdService extends GetxService {
   Future<AdService> init() async {
     isConfigured.value = _hasNativeAppId;
     if (!isConfigured.value) {
-      debugPrint(
-        'AdService: AdMob disabled because no native app ID is configured '
-        'for ${Platform.operatingSystem}.',
+      DebugLogger.logInfo(
+        module: 'AdMob',
+        className: 'AdService',
+        method: 'init',
+        message: 'AdMob disabled because native app ID is not configured',
+        additionalDetails: {'platform': Platform.operatingSystem},
       );
       return this;
     }
 
     await MobileAds.instance.initialize();
+    DebugLogger.logInfo(
+      module: 'AdMob',
+      className: 'AdService',
+      method: 'init',
+      message: 'Mobile Ads SDK initialized',
+    );
     await preloadNativeAds();
     await preloadInterstitial();
     _refreshInterstitialEligibility();
@@ -47,6 +56,13 @@ class AdService extends GetxService {
       return;
     }
 
+    DebugLogger.logInfo(
+      module: 'AdMob',
+      className: 'AdService',
+      method: 'preloadNativeAds',
+      message: 'Preloading native ads',
+      additionalDetails: {'count': count},
+    );
     _nativeAds.clear();
     for (var index = 0; index < count; index++) {
       final ad = NativeAd(
@@ -73,6 +89,12 @@ class AdService extends GetxService {
       return;
     }
 
+    DebugLogger.logInfo(
+      module: 'AdMob',
+      className: 'AdService',
+      method: 'preloadInterstitial',
+      message: 'Preloading interstitial ad',
+    );
     final completer = Completer<void>();
     await InterstitialAd.load(
       adUnitId: _interstitialAdUnitId,
@@ -108,6 +130,16 @@ class AdService extends GetxService {
       return false;
     }
 
+    DebugLogger.logInfo(
+      module: 'AdMob',
+      className: 'AdService',
+      method: 'maybeShowInterstitial',
+      message: 'Checking interstitial eligibility',
+      additionalDetails: {
+        'canShowInterstitial': canShowInterstitial.value,
+        'hasInterstitial': _interstitialAd != null,
+      },
+    );
     _refreshInterstitialEligibility();
     if (!canShowInterstitial.value || _interstitialAd == null) {
       return false;

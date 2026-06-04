@@ -6,6 +6,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../data/repositories/premium_repository.dart';
 import '../constants/analytics_events.dart';
 import 'analytics_service.dart';
+import 'debug_logger.dart';
 
 class PremiumService extends GetxService {
   PremiumService({
@@ -34,19 +35,54 @@ class PremiumService extends GetxService {
     if (apiKey.isNotEmpty && (Platform.isAndroid || Platform.isIOS)) {
       await Purchases.setLogLevel(LogLevel.warn);
       await Purchases.configure(PurchasesConfiguration(apiKey));
+      DebugLogger.logInfo(
+        module: 'RevenueCat',
+        className: 'PremiumService',
+        method: 'init',
+        message: 'RevenueCat configured',
+        additionalDetails: {'platform': Platform.operatingSystem},
+      );
       _customerInfoListener = (customerInfo) {
         _customerInfo.value = customerInfo;
+        DebugLogger.logState(
+          module: 'RevenueCat',
+          className: 'PremiumService',
+          method: 'customerInfoUpdateListener',
+          state: 'customerInfo',
+          to: customerInfo.originalAppUserId,
+          additionalDetails: {
+            'activeEntitlements': customerInfo.entitlements.active.keys
+                .toList(),
+          },
+        );
       };
       _repository.addCustomerInfoUpdateListener(_customerInfoListener!);
       await refresh();
     }
     _isReady.value = true;
+    DebugLogger.logInfo(
+      module: 'RevenueCat',
+      className: 'PremiumService',
+      method: 'init',
+      message: 'Premium service ready',
+      additionalDetails: {'isReady': _isReady.value, 'isPremium': isPremium},
+    );
     return this;
   }
 
   Future<void> refresh() async {
     _customerInfo.value = await _repository.getCustomerInfo();
     _offerings.value = await _repository.getOfferings();
+    DebugLogger.logInfo(
+      module: 'RevenueCat',
+      className: 'PremiumService',
+      method: 'refresh',
+      message: 'RevenueCat state refreshed',
+      additionalDetails: {
+        'isPremium': isPremium,
+        'hasCurrentOffering': _offerings.value?.current != null,
+      },
+    );
   }
 
   Future<CustomerInfo> purchase(Package package) async {

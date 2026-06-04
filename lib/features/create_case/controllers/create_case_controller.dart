@@ -4,6 +4,7 @@ import '../../../core/constants/analytics_events.dart';
 import '../../../core/routes/route_names.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/services/analytics_service.dart';
+import '../../../core/services/debug_logger.dart';
 import '../../../data/repositories/case_repository.dart';
 
 class CreateCaseController extends GetxController {
@@ -37,15 +38,33 @@ class CreateCaseController extends GetxController {
   }
 
   void nextStep() {
+    final previousStep = currentStep.value;
     validateStep();
     if (_isCurrentStepValid) {
       currentStep.value += 1;
+      DebugLogger.logState(
+        module: 'CreateCase',
+        className: 'CreateCaseController',
+        method: 'nextStep',
+        state: 'currentStep',
+        from: previousStep,
+        to: currentStep.value,
+      );
     }
   }
 
   void previousStep() {
     if (currentStep.value > 0) {
+      final previousStep = currentStep.value;
       currentStep.value -= 1;
+      DebugLogger.logState(
+        module: 'CreateCase',
+        className: 'CreateCaseController',
+        method: 'previousStep',
+        state: 'currentStep',
+        from: previousStep,
+        to: currentStep.value,
+      );
     }
   }
 
@@ -107,7 +126,20 @@ class CreateCaseController extends GetxController {
       lastCreatedCaseId.value = caseId;
       reset();
       return caseId;
-    } catch (error) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'CreateCase',
+        className: 'CreateCaseController',
+        method: 'submitCase',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {
+          'relationshipType': relationshipType.value,
+          'category': category.value,
+          'descriptionLength': description.value.length,
+          'questionLength': question.value.length,
+        },
+      );
       submissionError.value = _mapSubmissionError(error);
       rethrow;
     } finally {

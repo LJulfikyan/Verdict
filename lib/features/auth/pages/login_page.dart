@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/route_names.dart';
+import '../../../core/services/debug_logger.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/app_button.dart';
@@ -35,8 +36,22 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) {
         return;
       }
+      DebugLogger.logNavigation(
+        module: 'Router',
+        className: '_LoginPageState',
+        method: '_runAuth',
+        currentRoute: RouteNames.login,
+        targetRoute: RouteNames.home,
+      );
       context.go(RouteNames.home);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Auth',
+        className: '_LoginPageState',
+        method: '_runAuth',
+        error: error,
+        stackTrace: stackTrace,
+      );
       if (!mounted) {
         return;
       }

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/user_repository.dart';
+import 'debug_logger.dart';
 
 class AuthService extends GetxService with ChangeNotifier {
   AuthService({
@@ -25,6 +26,12 @@ class AuthService extends GetxService with ChangeNotifier {
   bool get isGuest => _currentUser.value?.isAnonymous ?? false;
 
   Future<AuthService> init() async {
+    DebugLogger.logInfo(
+      module: 'Auth',
+      className: 'AuthService',
+      method: 'init',
+      message: 'Initializing auth service',
+    );
     await _repository.initializeGoogleSignIn();
     _subscription = _repository.authStateChanges().listen((user) async {
       _currentUser.value = user;
@@ -32,6 +39,14 @@ class AuthService extends GetxService with ChangeNotifier {
         await _userRepository.createOrUpdateFromAuthUser(user);
         await _userRepository.updateLastSeen(user.uid);
       }
+      DebugLogger.logState(
+        module: 'Auth',
+        className: 'AuthService',
+        method: 'authStateChanges.listen',
+        state: 'currentUser',
+        to: user?.uid,
+        additionalDetails: {'isAnonymous': user?.isAnonymous},
+      );
       notifyListeners();
     });
     _currentUser.value = _repository.currentUser;
@@ -39,6 +54,16 @@ class AuthService extends GetxService with ChangeNotifier {
       await _userRepository.createOrUpdateFromAuthUser(_currentUser.value!);
       await _userRepository.updateLastSeen(_currentUser.value!.uid);
     }
+    DebugLogger.logInfo(
+      module: 'Auth',
+      className: 'AuthService',
+      method: 'init',
+      message: 'Auth service ready',
+      additionalDetails: {
+        'currentUser': _currentUser.value?.uid,
+        'isAuthenticated': isAuthenticated,
+      },
+    );
     return this;
   }
 

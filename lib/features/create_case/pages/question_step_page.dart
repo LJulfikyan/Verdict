@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/route_names.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/debug_logger.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../controllers/create_case_controller.dart';
@@ -39,8 +40,22 @@ class _QuestionStepPageState extends State<QuestionStepPage> {
       if (!mounted) {
         return;
       }
+      DebugLogger.logNavigation(
+        module: 'Router',
+        className: '_QuestionStepPageState',
+        method: '_submit',
+        currentRoute: RouteNames.createQuestion,
+        targetRoute: RouteNames.createSuccess,
+      );
       context.go(RouteNames.createSuccess);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'CreateCase',
+        className: '_QuestionStepPageState',
+        method: '_submit',
+        error: error,
+        stackTrace: stackTrace,
+      );
       if (!mounted) {
         return;
       }

@@ -7,6 +7,7 @@ import '../../../core/constants/analytics_events.dart';
 import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/case_action_service.dart';
+import '../../../core/services/debug_logger.dart';
 import '../../../data/models/case_model.dart';
 import '../../../data/repositories/case_repository.dart';
 import '../../../data/repositories/user_repository.dart';
@@ -82,7 +83,15 @@ class CaseDetailController extends GetxController {
         AnalyticsEvents.caseDetailOpened,
         parameters: {'case_id': caseId, 'category': hydrated.category},
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'CaseDetail',
+        className: 'CaseDetailController',
+        method: 'loadCase',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'caseId': caseId},
+      );
       errorMessage.value = 'Could not load this case right now.';
       state.value = CaseDetailState.error;
     }
@@ -108,9 +117,25 @@ class CaseDetailController extends GetxController {
         winnerOption: result.winnerOption,
         hotScore: result.hotScore,
       );
-    } on FirebaseException catch (error) {
+    } on FirebaseException catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'CaseDetail',
+        className: 'CaseDetailController',
+        method: 'vote',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'caseId': item.id, 'option': option},
+      );
       Get.snackbar('Vote failed', _caseActionService.mapVoteError(error));
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'CaseDetail',
+        className: 'CaseDetailController',
+        method: 'vote',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'caseId': item.id, 'option': option},
+      );
       Get.snackbar('Vote failed', 'Could not submit your vote right now.');
     } finally {
       isVoting.value = false;
@@ -130,7 +155,15 @@ class CaseDetailController extends GetxController {
         caseModel: item,
         isCurrentlySaved: isSaved.value,
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'CaseDetail',
+        className: 'CaseDetailController',
+        method: 'toggleSave',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'caseId': item.id},
+      );
       Get.snackbar('Save failed', 'Could not update saved state right now.');
     } finally {
       isSaving.value = false;

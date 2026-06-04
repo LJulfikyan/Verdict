@@ -2,6 +2,7 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:get/get.dart';
 
 import '../constants/remote_config_keys.dart';
+import 'debug_logger.dart';
 
 class RemoteConfigService extends GetxService {
   RemoteConfigService({required FirebaseRemoteConfig remoteConfig})
@@ -23,6 +24,26 @@ class RemoteConfigService extends GetxService {
       RemoteConfigKeys.enableNotifications: true,
     });
     await _remoteConfig.fetchAndActivate();
+    DebugLogger.logInfo(
+      module: 'RemoteConfig',
+      className: 'RemoteConfigService',
+      method: 'init',
+      message: 'Remote config initialized',
+      additionalDetails: {
+        RemoteConfigKeys.feedPageSize: _remoteConfig.getInt(
+          RemoteConfigKeys.feedPageSize,
+        ),
+        RemoteConfigKeys.enableAds: _remoteConfig.getBool(
+          RemoteConfigKeys.enableAds,
+        ),
+        RemoteConfigKeys.enablePremiumPaywall: _remoteConfig.getBool(
+          RemoteConfigKeys.enablePremiumPaywall,
+        ),
+        RemoteConfigKeys.enableNotifications: _remoteConfig.getBool(
+          RemoteConfigKeys.enableNotifications,
+        ),
+      },
+    );
     return this;
   }
 

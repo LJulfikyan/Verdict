@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:purchases_flutter/errors.dart';
 import 'package:purchases_flutter/models/package_wrapper.dart';
 
+import '../../../core/services/debug_logger.dart';
 import '../../../core/services/premium_service.dart';
 
 class PremiumController extends GetxController {
@@ -59,9 +60,14 @@ class PremiumController extends GetxController {
     try {
       await _premiumService.restorePurchases();
       errorMessage.value = '';
-    } on PurchasesErrorCode catch (_) {
-      errorMessage.value = 'Restore failed. Please try again.';
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'RevenueCat',
+        className: 'PremiumController',
+        method: 'restorePurchases',
+        error: error,
+        stackTrace: stackTrace,
+      );
       errorMessage.value = 'Restore failed. Please try again.';
     } finally {
       isRestoring.value = false;
@@ -77,7 +83,14 @@ class PremiumController extends GetxController {
     try {
       errorMessage.value = '';
       await action();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'RevenueCat',
+        className: 'PremiumController',
+        method: '_run',
+        error: error,
+        stackTrace: stackTrace,
+      );
       final code = error is PlatformException
           ? PurchasesErrorHelper.getErrorCode(error)
           : null;

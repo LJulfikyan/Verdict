@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../core/services/debug_logger.dart';
 import '../datasources/firestore_datasource.dart';
 import '../models/case_feed_page.dart';
 import '../models/case_model.dart';
@@ -14,12 +15,31 @@ class UserRepository {
   final FirestoreDataSource _firestoreDataSource;
 
   Future<UserModel?> getUser(String userId) async {
-    final snapshot = await _firestoreDataSource.getUser(userId);
-    final data = snapshot.data();
-    if (!snapshot.exists || data == null) {
-      return null;
+    try {
+      final snapshot = await _firestoreDataSource.getUser(userId);
+      final data = snapshot.data();
+      if (!snapshot.exists || data == null) {
+        DebugLogger.logInfo(
+          module: 'Repository',
+          className: 'UserRepository',
+          method: 'getUser',
+          message: 'User document not found',
+          additionalDetails: {'userId': userId},
+        );
+        return null;
+      }
+      return UserModel.fromMap(data, id: snapshot.id);
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Repository',
+        className: 'UserRepository',
+        method: 'getUser',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'userId': userId},
+      );
+      rethrow;
     }
-    return UserModel.fromMap(data, id: snapshot.id);
   }
 
   Future<void> createOrUpdateFromAuthUser(User user) async {
@@ -29,24 +49,36 @@ class UserRepository {
         ? user.providerData.first.providerId
         : 'unknown';
 
-    await _firestoreDataSource.setUser(user.uid, {
-      'id': user.uid,
-      'displayName': user.displayName,
-      'photoUrl': user.photoURL,
-      'provider': provider,
-      'premium': false,
-      'createdAt': user.metadata.creationTime,
-      'lastSeenAt': DateTime.now(),
-      'casesCount': 0,
-      'votesCount': 0,
-      'savedCount': 0,
-      'reportsCount': 0,
-      'agreementScore': 0,
-      'country': null,
-      'gender': null,
-      'ageRange': null,
-      'isBanned': false,
-    });
+    try {
+      await _firestoreDataSource.setUser(user.uid, {
+        'id': user.uid,
+        'displayName': user.displayName,
+        'photoUrl': user.photoURL,
+        'provider': provider,
+        'premium': false,
+        'createdAt': user.metadata.creationTime,
+        'lastSeenAt': DateTime.now(),
+        'casesCount': 0,
+        'votesCount': 0,
+        'savedCount': 0,
+        'reportsCount': 0,
+        'agreementScore': 0,
+        'country': null,
+        'gender': null,
+        'ageRange': null,
+        'isBanned': false,
+      });
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Repository',
+        className: 'UserRepository',
+        method: 'createOrUpdateFromAuthUser',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'userId': user.uid, 'provider': provider},
+      );
+      rethrow;
+    }
   }
 
   Future<void> updateLastSeen(String userId) {
@@ -56,8 +88,20 @@ class UserRepository {
   }
 
   Future<Set<String>> getSavedCaseIds(String userId) async {
-    final snapshot = await _firestoreDataSource.fetchSavedCases(userId);
-    return snapshot.docs.map((doc) => doc.id).toSet();
+    try {
+      final snapshot = await _firestoreDataSource.fetchSavedCases(userId);
+      return snapshot.docs.map((doc) => doc.id).toSet();
+    } catch (error, stackTrace) {
+      DebugLogger.logError(
+        module: 'Repository',
+        className: 'UserRepository',
+        method: 'getSavedCaseIds',
+        error: error,
+        stackTrace: stackTrace,
+        additionalDetails: {'userId': userId},
+      );
+      rethrow;
+    }
   }
 
   Future<ProfileStatisticsModel> getProfileStatistics(String userId) async {

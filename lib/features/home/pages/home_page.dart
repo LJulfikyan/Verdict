@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/routes/route_names.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/loading_skeleton.dart';
+import '../../notifications/controllers/notifications_controller.dart';
 import '../../onboarding/widgets/app_logo_mark.dart';
 import '../controllers/home_controller.dart';
 import '../widgets/feed_card.dart';
@@ -20,10 +23,25 @@ class HomePage extends StatelessWidget {
         toolbarHeight: 56,
         title: const AppLogoMark(size: 28, showWordmark: false),
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
+          Get.isRegistered<NotificationsController>()
+              ? Obx(() {
+                  final notificationsController =
+                      Get.find<NotificationsController>();
+                  return Badge(
+                    isLabelVisible: notificationsController.unreadCount.value > 0,
+                    label: Text(
+                      notificationsController.unreadCount.value.toString(),
+                    ),
+                    child: IconButton(
+                      onPressed: () => context.go(RouteNames.inbox),
+                      icon: const Icon(Icons.notifications_none_rounded),
+                    ),
+                  );
+                })
+              : IconButton(
+                  onPressed: () => context.go(RouteNames.inbox),
+                  icon: const Icon(Icons.notifications_none_rounded),
+                ),
           const SizedBox(width: AppDimensions.space8),
         ],
       ),

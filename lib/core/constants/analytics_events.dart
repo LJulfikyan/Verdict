@@ -11,5 +11,7 @@ abstract final class AnalyticsEvents {
   static const caseSaved = 'case_saved';
   static const caseShared = 'case_shared';
   static const premiumPurchase = 'premium_purchase';
+  static const notificationReceived = 'notification_received';
   static const notificationOpened = 'notification_opened';
+  static const notificationDismissed = 'notification_dismissed';
 }

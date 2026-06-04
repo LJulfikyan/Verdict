@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
+import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../controllers/notifications_controller.dart';
 
@@ -12,6 +14,8 @@ class NotificationsBinding extends Bindings {
         () => NotificationsController(
           repository: Get.find<NotificationRepository>(),
           authService: Get.find<AuthService>(),
+          analyticsService: Get.find<AnalyticsService>(),
+          notificationService: Get.find<NotificationService>(),
         ),
         fenix: true,
       );

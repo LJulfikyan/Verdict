@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/datasources/firebase_auth_datasource.dart';
 import '../../data/datasources/firestore_datasource.dart';
 import '../../data/datasources/functions_datasource.dart';
+import '../../data/datasources/notification_datasource.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/case_repository.dart';
 import '../../data/repositories/notification_repository.dart';
@@ -71,6 +72,12 @@ class AppInitializer {
       ),
       permanent: true,
     );
+    Get.put(
+      NotificationDataSource(
+        firestoreDataSource: Get.find<FirestoreDataSource>(),
+      ),
+      permanent: true,
+    );
   }
 
   void _registerRepositories() {
@@ -107,7 +114,7 @@ class AppInitializer {
     Get.put(
       NotificationRepository(
         authDataSource: Get.find<FirebaseAuthDataSource>(),
-        firestoreDataSource: Get.find<FirestoreDataSource>(),
+        notificationDataSource: Get.find<NotificationDataSource>(),
         functionsDataSource: Get.find<FunctionsDataSource>(),
       ),
       permanent: true,
@@ -144,6 +151,8 @@ class AppInitializer {
     final notificationService = NotificationService(
       messaging: FirebaseMessaging.instance,
       analyticsService: analyticsService,
+      authService: authService,
+      userRepository: Get.find<UserRepository>(),
     );
     await notificationService.init();
     Get.put(notificationService, permanent: true);

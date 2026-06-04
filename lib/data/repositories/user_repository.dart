@@ -55,4 +55,11 @@ class UserRepository {
     final snapshot = await _firestoreDataSource.fetchSavedCases(userId);
     return snapshot.docs.map((doc) => doc.id).toSet();
   }
+
+  Future<void> updateMessagingToken(String userId, String token) {
+    return _firestoreDataSource.updateUser(userId, {
+      'fcmToken': token,
+      'fcmTokenUpdatedAt': DateTime.now(),
+    });
+  }
 }

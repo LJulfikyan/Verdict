@@ -1,24 +1,24 @@
 import '../../core/constants/api_constants.dart';
 import '../datasources/firebase_auth_datasource.dart';
-import '../datasources/firestore_datasource.dart';
 import '../datasources/functions_datasource.dart';
+import '../datasources/notification_datasource.dart';
 import '../models/notification_model.dart';
 
 class NotificationRepository {
   NotificationRepository({
     required FirebaseAuthDataSource authDataSource,
-    required FirestoreDataSource firestoreDataSource,
+    required NotificationDataSource notificationDataSource,
     required FunctionsDataSource functionsDataSource,
   }) : _authDataSource = authDataSource,
-       _firestoreDataSource = firestoreDataSource,
+       _notificationDataSource = notificationDataSource,
        _functionsDataSource = functionsDataSource;
 
   final FirebaseAuthDataSource _authDataSource;
-  final FirestoreDataSource _firestoreDataSource;
+  final NotificationDataSource _notificationDataSource;
   final FunctionsDataSource _functionsDataSource;
 
   Stream<List<NotificationModel>> notifications(String userId) {
-    return _firestoreDataSource
+    return _notificationDataSource
         .notificationsStream(userId)
         .map(
           (snapshot) => snapshot.docs
@@ -32,17 +32,33 @@ class NotificationRepository {
     if (currentUser == null) {
       throw StateError('User must be authenticated to update notifications.');
     }
-    await _firestoreDataSource.updateNotificationRead(
-      userId: currentUser.uid,
-      notificationId: notificationId,
-      isRead: true,
+    await _functionsDataSource.call(
+      ApiConstants.markNotificationRead,
+      parameters: {'notificationId': notificationId},
     );
   }
 
-  Future<void> markReadViaFunction(String notificationId) {
-    return _functionsDataSource.call(
-      ApiConstants.markNotificationRead,
-      parameters: {'notificationId': notificationId},
+  Future<void> markAllRead(Iterable<String> notificationIds) async {
+    final currentUser = _authDataSource.currentUser;
+    if (currentUser == null) {
+      throw StateError('User must be authenticated to update notifications.');
+    }
+    for (final notificationId in notificationIds) {
+      await _functionsDataSource.call(
+        ApiConstants.markNotificationRead,
+        parameters: {'notificationId': notificationId},
+      );
+    }
+  }
+
+  Future<void> deleteNotification(String notificationId) async {
+    final currentUser = _authDataSource.currentUser;
+    if (currentUser == null) {
+      throw StateError('User must be authenticated to delete notifications.');
+    }
+    await _notificationDataSource.delete(
+      userId: currentUser.uid,
+      notificationId: notificationId,
     );
   }
 }

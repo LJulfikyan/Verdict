@@ -14,6 +14,8 @@ class FirestoreDataSource {
       _firestore.collection('users');
   Query<Map<String, dynamic>> get reportsCollection =>
       _firestore.collectionGroup('reports');
+  Query<Map<String, dynamic>> authoredCasesQuery(String userId) =>
+      casesCollection.where('authorId', isEqualTo: userId);
 
   Future<QuerySnapshot<Map<String, dynamic>>> fetchCases({
     DocumentSnapshot<Map<String, dynamic>>? startAfter,
@@ -86,6 +88,63 @@ class FirestoreDataSource {
 
   Future<QuerySnapshot<Map<String, dynamic>>> fetchSavedCases(String userId) {
     return savedCasesCollection(userId).get();
+  }
+
+  Future<QuerySnapshot<Map<String, dynamic>>> fetchSavedCasesPage({
+    required String userId,
+    DocumentSnapshot<Map<String, dynamic>>? startAfter,
+    int limit = 20,
+  }) {
+    Query<Map<String, dynamic>> query = savedCasesCollection(
+      userId,
+    ).orderBy('savedAt', descending: true);
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+    return query
+        .limit(limit)
+        .get(const GetOptions(source: Source.serverAndCache));
+  }
+
+  Future<List<DocumentSnapshot<Map<String, dynamic>>>> fetchCasesByIds(
+    List<String> caseIds,
+  ) async {
+    if (caseIds.isEmpty) {
+      return const [];
+    }
+
+    final snapshots = await Future.wait([
+      for (int index = 0; index < caseIds.length; index += 10)
+        casesCollection
+            .where(
+              FieldPath.documentId,
+              whereIn: caseIds.sublist(
+                index,
+                index + 10 > caseIds.length ? caseIds.length : index + 10,
+              ),
+            )
+            .get(const GetOptions(source: Source.serverAndCache)),
+    ]);
+
+    final byId = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+    for (final snapshot in snapshots) {
+      for (final doc in snapshot.docs) {
+        byId[doc.id] = doc;
+      }
+    }
+
+    return caseIds
+        .map((id) => byId[id])
+        .whereType<DocumentSnapshot<Map<String, dynamic>>>()
+        .toList(growable: false);
+  }
+
+  Future<QuerySnapshot<Map<String, dynamic>>> fetchCasesByAuthor(
+    String userId,
+  ) {
+    return authoredCasesQuery(
+      userId,
+    ).get(const GetOptions(source: Source.serverAndCache));
   }
 
   Future<DocumentSnapshot<Map<String, dynamic>>> fetchVote({

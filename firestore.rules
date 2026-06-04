@@ -1,0 +1,134 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function callerDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function callerExists() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function callerNotBanned() {
+      return callerExists() && !(callerDoc().data.isBanned == true);
+    }
+
+    function protectedUserFieldsUnchanged() {
+      return !('premium' in request.resource.data.diff(resource.data).affectedKeys()) &&
+        !('trustScore' in request.resource.data.diff(resource.data).affectedKeys()) &&
+        !('role' in request.resource.data.diff(resource.data).affectedKeys()) &&
+        !('isBanned' in request.resource.data.diff(resource.data).affectedKeys());
+    }
+
+    function protectedCaseFieldsUnchanged() {
+      return request.resource.data.votesCount == resource.data.votesCount &&
+        request.resource.data.reportsCount == resource.data.reportsCount &&
+        request.resource.data.savesCount == resource.data.savesCount &&
+        request.resource.data.sharesCount == resource.data.sharesCount &&
+        request.resource.data.hotScore == resource.data.hotScore &&
+        request.resource.data.winnerOption == resource.data.winnerOption;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) && protectedUserFieldsUnchanged();
+      allow delete: if isOwner(userId);
+
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if false;
+        allow update: if isOwner(userId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+        allow delete: if isOwner(userId);
+      }
+
+      match /saved_cases/{caseId} {
+        allow read: if isOwner(userId);
+        allow create, delete: if isOwner(userId) && callerNotBanned();
+        allow update: if false;
+      }
+
+      match /subscriptions/{subscriptionId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+    }
+
+    match /cases/{caseId} {
+      allow read: if true;
+
+      allow create: if isAuthenticated() &&
+        callerNotBanned() &&
+        request.resource.data.authorId == request.auth.uid &&
+        request.resource.data.relationshipType is string &&
+        request.resource.data.relationshipType.size() > 0 &&
+        request.resource.data.category is string &&
+        request.resource.data.category.size() > 0 &&
+        request.resource.data.description is string &&
+        request.resource.data.description.size() >= 50 &&
+        request.resource.data.description.size() <= 500 &&
+        request.resource.data.question is string &&
+        request.resource.data.question.size() >= 1 &&
+        request.resource.data.question.size() <= 100;
+
+      allow update: if isAuthenticated() &&
+        callerNotBanned() &&
+        resource.data.authorId == request.auth.uid &&
+        protectedCaseFieldsUnchanged() &&
+        request.resource.data.relationshipType == resource.data.relationshipType &&
+        request.resource.data.category == resource.data.category &&
+        request.resource.data.description is string &&
+        request.resource.data.description.size() >= 50 &&
+        request.resource.data.description.size() <= 500 &&
+        request.resource.data.question is string &&
+        request.resource.data.question.size() >= 1 &&
+        request.resource.data.question.size() <= 100;
+
+      allow delete: if isAuthenticated() &&
+        callerNotBanned() &&
+        resource.data.authorId == request.auth.uid;
+
+      match /votes/{userId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          callerNotBanned() &&
+          !exists(/databases/$(database)/documents/cases/$(caseId)/votes/$(userId));
+        allow update, delete: if false;
+      }
+
+      match /reports/{reportId} {
+        allow create: if isAuthenticated() && callerNotBanned();
+        allow read, update, delete: if false;
+      }
+    }
+
+    match /boosts/{boostId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
+    match /analytics_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /audit_logs/{logId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

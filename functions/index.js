@@ -13,6 +13,7 @@ const REGION = 'us-central1';
 const CASES_COLLECTION = 'cases';
 const USERS_COLLECTION = 'users';
 const ANALYTICS_COLLECTION = 'analytics_events';
+const AUDIT_LOGS_COLLECTION = 'audit_logs';
 const NOTIFICATION_MILESTONES = [100, 500, 1000, 5000];
 const REPORT_HIDE_THRESHOLD = 5;
 const VALID_VOTE_OPTIONS = new Set([
@@ -28,9 +29,16 @@ const VALID_REPORT_REASONS = new Set([
   'harassment',
   'other',
 ]);
+const RATE_LIMITS = {
+  createCase: {limit: 5, windowMs: 24 * 60 * 60 * 1000, enabled: false},
+  voteCase: {limit: 500, windowMs: 24 * 60 * 60 * 1000, enabled: false},
+  reportCase: {limit: 50, windowMs: 24 * 60 * 60 * 1000, enabled: false},
+  saveCase: {limit: 500, windowMs: 24 * 60 * 60 * 1000, enabled: false},
+};
 
 exports.voteCase = onCall({region: REGION}, async (request) => {
   const {userId, userRef, userData} = await requireParticipantUser(request);
+  await rateLimit('voteCase', userId);
 
   const caseId = `${request.data?.caseId ?? ''}`.trim();
   const option = `${request.data?.option ?? ''}`.trim();
@@ -63,6 +71,15 @@ exports.voteCase = onCall({region: REGION}, async (request) => {
 
       const caseData = caseSnapshot.data() ?? {};
       ensureActiveCase(caseData);
+      // Product rule: authors cannot vote on their own cases.
+      // This reduces manipulation risk and preserves jury integrity.
+      if (`${caseData.authorId ?? ''}` === userId) {
+        throw fail(
+          'permission-denied',
+          'self_vote_not_allowed',
+          'Authors cannot vote on their own cases.',
+        );
+      }
 
       const currentResults = normalizeResults(caseData.results);
       currentResults[option] += 1;
@@ -115,6 +132,7 @@ exports.voteCase = onCall({region: REGION}, async (request) => {
         caseData,
         caseId,
         votesCount,
+        actorUserId: userId,
       });
 
       return {
@@ -135,6 +153,7 @@ exports.voteCase = onCall({region: REGION}, async (request) => {
 
 exports.createCase = onCall({region: REGION}, async (request) => {
   const {userId, userRef, userData} = await requireParticipantUser(request);
+  await rateLimit('createCase', userId);
 
   const relationshipType = `${request.data?.relationshipType ?? ''}`.trim();
   const category = `${request.data?.category ?? ''}`.trim();
@@ -205,6 +224,7 @@ exports.createCase = onCall({region: REGION}, async (request) => {
 
 exports.saveCase = onCall({region: REGION}, async (request) => {
   const {userId, userRef} = await requireParticipantUser(request);
+  await rateLimit('saveCase', userId);
   const caseId = `${request.data?.caseId ?? ''}`.trim();
 
   if (!caseId) {
@@ -286,6 +306,7 @@ exports.saveCase = onCall({region: REGION}, async (request) => {
 
 exports.reportCase = onCall({region: REGION}, async (request) => {
   const {userId, userRef} = await requireParticipantUser(request);
+  await rateLimit('reportCase', userId);
   const caseId = `${request.data?.caseId ?? ''}`.trim();
   const reason = `${request.data?.reason ?? ''}`.trim();
 
@@ -340,6 +361,17 @@ exports.reportCase = onCall({region: REGION}, async (request) => {
         createdAt: FieldValue.serverTimestamp(),
         payload: {
           caseId,
+          reason,
+          reportsCount,
+          hidden: nextStatus == 'hidden',
+        },
+      });
+
+      auditLog(transaction, {
+        action: 'report_case',
+        userId,
+        targetId: caseId,
+        metadata: {
           reason,
           reportsCount,
           hidden: nextStatus == 'hidden',
@@ -490,7 +522,10 @@ function parseTimestamp(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function maybeCreateMilestoneNotification(transaction, {caseData, caseId, votesCount}) {
+function maybeCreateMilestoneNotification(
+  transaction,
+  {caseData, caseId, votesCount, actorUserId},
+) {
   const milestone = NOTIFICATION_MILESTONES.find((value) => value === votesCount);
   const authorId = `${caseData.authorId ?? ''}`;
   if (!milestone || !authorId) {
@@ -503,6 +538,16 @@ function maybeCreateMilestoneNotification(transaction, {caseData, caseId, votesC
     .collection('notifications')
     .doc();
   transaction.set(notificationRef, buildMilestoneNotification({milestone, caseId}));
+  auditLog(transaction, {
+    action: 'create_notification',
+    userId: actorUserId,
+    targetId: caseId,
+    metadata: {
+      type: 'case_milestone',
+      recipientUserId: authorId,
+      milestone,
+    },
+  });
 }
 
 function buildMilestoneNotification({milestone, caseId}) {
@@ -532,12 +577,59 @@ function normalizeFunctionError(error, fallbackCode) {
   return fail('internal', fallbackCode);
 }
 
-function fail(code, message) {
+function fail(code, message, displayMessage) {
   return new HttpsError(code, message, {
     success: false,
     error: {
-      code,
-      message,
+      code: message,
+      message: displayMessage ?? message,
     },
+  });
+}
+
+function auditLog(transaction, {action, userId, targetId, metadata = {}}) {
+  const auditRef = db.collection(AUDIT_LOGS_COLLECTION).doc();
+  transaction.set(auditRef, {
+    action,
+    userId,
+    targetId,
+    metadata,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+}
+
+async function rateLimit(action, userId) {
+  const config = RATE_LIMITS[action];
+  if (!config || !config.enabled) {
+    return;
+  }
+
+  const windowStart = admin.firestore.Timestamp.fromMillis(
+    Date.now() - config.windowMs,
+  );
+  const snapshot = await db
+    .collection(AUDIT_LOGS_COLLECTION)
+    .where('action', '==', `rate_limit:${action}`)
+    .where('userId', '==', userId)
+    .where('createdAt', '>=', windowStart)
+    .get();
+
+  if (snapshot.size >= config.limit) {
+    throw fail(
+      'resource-exhausted',
+      'rate_limit_exceeded',
+      'Rate limit exceeded. Please try again later.',
+    );
+  }
+
+  await db.collection(AUDIT_LOGS_COLLECTION).add({
+    action: `rate_limit:${action}`,
+    userId,
+    targetId: '',
+    metadata: {
+      configuredLimit: config.limit,
+      enforced: config.enabled,
+    },
+    createdAt: FieldValue.serverTimestamp(),
   });
 }

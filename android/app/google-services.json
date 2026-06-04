@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "1059566871625",
+    "project_id": "verdict-jury",
+    "storage_bucket": "verdict-jury.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1059566871625:android:e31c052d4a46ae7b2e8b98",
+        "android_client_info": {
+          "package_name": "com.example.verdict"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1059566871625-mb2r8c0nh4iep8ctd2dir0jbet0hlp7l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDiZliKcMomFvoFSVzwz9fotSDE1mTHBUo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1059566871625-mb2r8c0nh4iep8ctd2dir0jbet0hlp7l.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1059566871625-f6aj6672sneude6gad9f0j7itmrlng64.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.verdict"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

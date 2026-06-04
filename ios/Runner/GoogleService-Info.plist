@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>1059566871625-f6aj6672sneude6gad9f0j7itmrlng64.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.1059566871625-f6aj6672sneude6gad9f0j7itmrlng64</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBUyS_wBbto3eYmqaDSNVnFoeI0SLky1Jk</string>
+	<key>GCM_SENDER_ID</key>
+	<string>1059566871625</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.verdict</string>
+	<key>PROJECT_ID</key>
+	<string>verdict-jury</string>
+	<key>STORAGE_BUCKET</key>
+	<string>verdict-jury.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:1059566871625:ios:2e5ee1103287c32f2e8b98</string>
+</dict>
+</plist>

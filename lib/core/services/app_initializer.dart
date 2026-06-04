@@ -21,13 +21,13 @@ import '../../data/repositories/premium_repository.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/vote_repository.dart';
+import '../../firebase_options.dart';
 import '../constants/app_constants.dart';
 import 'ad_service.dart';
 import 'analytics_service.dart';
 import 'app_state_service.dart';
 import 'auth_service.dart';
 import 'crashlytics_service.dart';
-import 'firebase_platform_options.dart';
 import 'notification_service.dart';
 import 'premium_service.dart';
 import 'remote_config_service.dart';
@@ -49,7 +49,7 @@ class AppInitializer {
 
   Future<void> _initializeFirebase() async {
     await Firebase.initializeApp(
-      options: FirebasePlatformOptions.currentPlatform,
+      options: DefaultFirebaseOptions.currentPlatform,
     );
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,

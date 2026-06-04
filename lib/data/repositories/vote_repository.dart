@@ -2,6 +2,7 @@ import '../../core/constants/api_constants.dart';
 import '../datasources/firestore_datasource.dart';
 import '../datasources/functions_datasource.dart';
 import '../models/vote_model.dart';
+import '../models/vote_submission_result.dart';
 
 class VoteRepository {
   VoteRepository({
@@ -13,7 +14,7 @@ class VoteRepository {
   final FirestoreDataSource _firestoreDataSource;
   final FunctionsDataSource _functionsDataSource;
 
-  Future<Map<String, int>> vote({
+  Future<VoteSubmissionResult> vote({
     required String caseId,
     required String option,
   }) async {
@@ -21,7 +22,24 @@ class VoteRepository {
       ApiConstants.voteCase,
       parameters: {'caseId': caseId, 'option': option},
     );
-    return Map<String, int>.from(result['results'] as Map? ?? const {});
+    return VoteSubmissionResult.fromMap(result);
+  }
+
+  Stream<VoteModel?> watchVote({
+    required String caseId,
+    required String userId,
+  }) {
+    return _firestoreDataSource.watchCase(caseId).asyncMap((_) async {
+      final snapshot = await _firestoreDataSource.fetchVote(
+        caseId: caseId,
+        userId: userId,
+      );
+      final data = snapshot.data();
+      if (!snapshot.exists || data == null) {
+        return null;
+      }
+      return VoteModel.fromMap(data);
+    });
   }
 
   Future<Map<String, VoteModel>> getVotesForCases({

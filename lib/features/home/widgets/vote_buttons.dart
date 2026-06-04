@@ -6,12 +6,14 @@ class VoteButtons extends StatelessWidget {
   const VoteButtons({
     required this.selectedVote,
     required this.isLoading,
+    required this.pendingVoteOption,
     required this.onVote,
     super.key,
   });
 
   final String? selectedVote;
   final bool isLoading;
+  final String? pendingVoteOption;
   final ValueChanged<String> onVote;
 
   static const _options = <(String, String)>[
@@ -31,7 +33,8 @@ class VoteButtons extends StatelessWidget {
       runSpacing: AppDimensions.space8,
       children: _options
           .map((option) {
-            final isSelected = selectedVote == option.$1;
+            final isSelected =
+                selectedVote == option.$1 || pendingVoteOption == option.$1;
 
             return SizedBox(
               width: (MediaQuery.sizeOf(context).width - 72) / 2,
@@ -53,7 +56,7 @@ class VoteButtons extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: isLoading && isSelected
+                child: isLoading && pendingVoteOption == option.$1
                     ? const SizedBox.square(
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),

@@ -94,6 +94,7 @@ class HomePage extends StatelessWidget {
                         isSaved: controller.isSaved(item.id),
                         isExpanded: controller.isExpanded(item.id),
                         isVoting: controller.isVoteBusy(item.id),
+                        pendingVoteOption: controller.pendingVoteOption(item.id),
                         onVote: (option) => controller.vote(item, option),
                         onSave: () => controller.toggleSaveCase(item),
                         onShare: () => controller.shareCase(item),

@@ -42,6 +42,10 @@ class FirestoreDataSource {
     return casesCollection.doc(caseId).get();
   }
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>> watchCase(String caseId) {
+    return casesCollection.doc(caseId).snapshots();
+  }
+
   Future<DocumentSnapshot<Map<String, dynamic>>> getUser(String userId) {
     return usersCollection.doc(userId).get();
   }

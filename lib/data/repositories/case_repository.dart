@@ -51,6 +51,10 @@ class CaseRepository {
     return CaseModel.fromMap(data, id: snapshot.id);
   }
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>> watchCase(String caseId) {
+    return _firestoreDataSource.watchCase(caseId);
+  }
+
   Future<String> createCase({
     required String relationshipType,
     required String category,

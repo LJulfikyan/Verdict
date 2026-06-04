@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../../core/services/analytics_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/share_service.dart';
 import '../../../data/repositories/case_repository.dart';
@@ -17,6 +18,7 @@ class HomeBinding extends Bindings {
           voteRepository: Get.find<VoteRepository>(),
           userRepository: Get.find<UserRepository>(),
           authService: Get.find<AuthService>(),
+          analyticsService: Get.find<AnalyticsService>(),
           shareService: Get.find<ShareService>(),
         ),
         fenix: true,

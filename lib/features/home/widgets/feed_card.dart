@@ -16,6 +16,7 @@ class FeedCard extends StatelessWidget {
     required this.isSaved,
     required this.isExpanded,
     required this.isVoting,
+    required this.pendingVoteOption,
     required this.onVote,
     required this.onSave,
     required this.onShare,
@@ -27,6 +28,7 @@ class FeedCard extends StatelessWidget {
   final bool isSaved;
   final bool isExpanded;
   final bool isVoting;
+  final String? pendingVoteOption;
   final ValueChanged<String> onVote;
   final VoidCallback onSave;
   final VoidCallback onShare;
@@ -100,6 +102,7 @@ class FeedCard extends StatelessWidget {
           VoteButtons(
             selectedVote: caseModel.userVote,
             isLoading: isVoting,
+            pendingVoteOption: pendingVoteOption,
             onVote: onVote,
           ),
           if (hasVoted) ...[
